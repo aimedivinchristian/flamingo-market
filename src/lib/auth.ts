@@ -49,7 +49,15 @@ export const authOptions: NextAuthOptions = {
   providers,
   callbacks: {
     async jwt({ token, user }) {
-      if (user) { token.role = (user as any).role; token.id = user.id; }
+      if (user) { token.role = (user as any).role; token.id = user.id; token.checkedAt = Date.now(); }
+      else if (token.id && Date.now() - (token.checkedAt || 0) > 60_000) {
+        // pick up role changes (e.g. seller approved by admin) without forcing a new login
+        try {
+          const u = await prisma.user.findUnique({ where: { id: token.id }, select: { role: true } });
+          if (u) token.role = u.role;
+        } catch { /* keep the old role if the DB is briefly unreachable */ }
+        token.checkedAt = Date.now();
+      }
       return token;
     },
     async session({ session, token }) {

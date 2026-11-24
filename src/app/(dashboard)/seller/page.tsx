@@ -10,7 +10,7 @@ import { useCategories } from "@/lib/hooks/useCategories";
 import { Plus, X, TrendingUp, Package, ShoppingBag, AlertTriangle, Image as ImgIcon, CheckCircle, Loader2, Pencil, Trash2, Store } from "lucide-react";
 import toast from "react-hot-toast";
 
-const TABS = ["Overview", "Products", "Orders", "Earnings", "Add Product"] as const;
+const TABS = ["Overview", "Products", "Orders", "Earnings", "Analytics", "Boost", "Add Product"] as const;
 type Tab = typeof TABS[number];
 
 function Stat({ icon: Icon, label, value, bg, color }: { icon: any; label: string; value: string | number; bg: string; color: string }) {
@@ -189,6 +189,18 @@ export default function SellerDashboard() {
           </div>
         )}
 
+        {tab === "Analytics" && (
+          <div className="bg-white border border-gray-100 rounded-2xl p-10 text-center shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+            <p className="text-gray-400 text-[13px] mb-5 max-w-sm mx-auto">See views, orders, conversion and revenue per product, and export to CSV.</p>
+            <a href="/seller/analytics" className="inline-flex items-center gap-2 bg-gradient-pink text-white font-bold text-[13.5px] px-6 py-3 rounded-full shadow-pink hover:opacity-90 transition-all">Open Analytics</a>
+          </div>
+        )}
+        {tab === "Boost" && (
+          <div className="bg-white border border-gray-100 rounded-2xl p-10 text-center shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+            <p className="text-gray-400 text-[13px] mb-5 max-w-sm mx-auto">Pay to show a product first in the marketplace for 3–30 days.</p>
+            <a href="/seller/boost" className="inline-flex items-center gap-2 bg-gradient-pink text-white font-bold text-[13.5px] px-6 py-3 rounded-full shadow-pink hover:opacity-90 transition-all">Boost a Product</a>
+          </div>
+        )}
         {tab === "Earnings" && (
           <div className="bg-white border border-gray-100 rounded-2xl p-10 text-center shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
             <div className="w-14 h-14 bg-pink-pale rounded-2xl flex items-center justify-center mx-auto mb-4"><TrendingUp className="w-6 h-6 text-pink" /></div>

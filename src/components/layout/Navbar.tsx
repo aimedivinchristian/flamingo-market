@@ -3,11 +3,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Search, ShoppingCart, Heart, ChevronDown, LogOut, LayoutDashboard, Menu, X } from "lucide-react";
+import { Search, ShoppingCart, Heart, ChevronDown, LogOut, LayoutDashboard, Menu, X, MessageCircle, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { useCart } from "@/lib/cart-store";
 import { useWishlist } from "@/lib/wishlist-store";
+import { useUnread } from "@/lib/hooks/useUnread";
 
 const CATS = ["Home","Fashion","Beauty","Home & Living","Detergents","Electronics","Supermarket","Accessories","More"];
 
@@ -20,6 +21,7 @@ export function Navbar() {
   const { totalItems, toggleCart } = useCart();
   const { count: wishCount } = useWishlist();
   const cartCount = totalItems();
+  const unread = useUnread();
 
   const dashHref = session?.user.role === "ADMIN" ? "/admin" : session?.user.role === "SELLER" ? "/seller" : "/buyer";
 
@@ -42,16 +44,16 @@ export function Navbar() {
       </div>
 
       <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-[0_2px_12px_rgba(0,0,0,0.05)]">
-        <div className="max-w-[1280px] mx-auto px-5 flex items-center gap-4 h-[68px]">
+        <div className="max-w-[1280px] mx-auto px-3 sm:px-5 flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2 py-2.5 sm:py-0 sm:gap-4 sm:h-[68px]">
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <img src="/flamingo-logo.png" alt="Flamingo Market" className="w-8 h-8 object-contain" />
-            <div>
+            <div className="hidden min-[380px]:block">
               <div className="font-extrabold text-[15px] text-pink leading-none tracking-tight">FLAMINGO MARKET</div>
               <div className="text-[9px] text-gray-400 font-medium tracking-widest uppercase leading-none mt-0.5">Shop Easy. Shop Smart.</div>
             </div>
           </Link>
 
-          <div className="flex-1 max-w-[500px] relative">
+          <div className="order-last basis-full sm:basis-auto sm:order-none sm:flex-1 sm:max-w-[500px] relative">
             <div className="relative">
               <input
                 value={search}
@@ -74,9 +76,15 @@ export function Navbar() {
               {wishCount() > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-pink text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">{wishCount()}</span>}
             </Link>
 
+            {session && (
+              <Link href="/messages" className="hidden md:flex w-9 h-9 rounded-xl border-[1.5px] border-gray-200 items-center justify-center text-gray-500 hover:border-pink hover:text-pink transition-all relative" aria-label="Messages">
+                <MessageCircle className="w-4 h-4" />
+                {unread > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-pink text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">{unread > 9 ? "9+" : unread}</span>}
+              </Link>
+            )}
             <NotificationBell />
 
-            <button onClick={toggleCart} className="flex w-9 h-9 rounded-xl border-[1.5px] border-gray-200 items-center justify-center text-gray-500 hover:border-pink hover:text-pink transition-all relative">
+            <button onClick={toggleCart} className="hidden md:flex w-9 h-9 rounded-xl border-[1.5px] border-gray-200 items-center justify-center text-gray-500 hover:border-pink hover:text-pink transition-all relative">
               <ShoppingCart className="w-4 h-4" />
               {cartCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-pink text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">{cartCount > 9 ? "9+" : cartCount}</span>}
             </button>
@@ -93,6 +101,7 @@ export function Navbar() {
                     <div className="px-4 py-3 border-b border-gray-100"><div className="text-sm font-bold text-gray-800 truncate">{session.user.name}</div><div className="text-xs text-gray-400 capitalize mt-0.5">{session.user.role?.toLowerCase()}</div></div>
                     <div className="p-1.5">
                       <Link href={dashHref} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-pink-pale text-sm text-gray-700 transition-colors" onClick={() => setUserMenu(false)}><LayoutDashboard className="w-4 h-4 text-pink" /> Dashboard</Link>
+                      {session.user.role === "BUYER" && <Link href="/become-seller" className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-pink-pale text-sm text-gray-700 transition-colors" onClick={() => setUserMenu(false)}><Store className="w-4 h-4 text-pink" /> Become a seller</Link>}
                       <button onClick={() => signOut({ callbackUrl: "/" })} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-500 transition-colors"><LogOut className="w-4 h-4" /> Sign Out</button>
                     </div>
                   </div>

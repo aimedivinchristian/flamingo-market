@@ -8,6 +8,6 @@ export default withAuth(
     if (path.startsWith("/buyer") && !token) return NextResponse.redirect(new URL("/login", req.url));
     return NextResponse.next();
   },
-  { callbacks: { authorized: ({ token, req }) => { const path = req.nextUrl.pathname; if (path.startsWith("/admin") || path.startsWith("/seller") || path.startsWith("/buyer")) return !!token; return true; } } }
+  { callbacks: { authorized: ({ token, req }) => { const path = req.nextUrl.pathname; if (path.startsWith("/admin") || path.startsWith("/seller") || path.startsWith("/buyer") || path.startsWith("/messages")) return !!token; return true; } } }
 );
-export const config = { matcher: ["/admin/:path*", "/seller/:path*", "/buyer/:path*"] };
+export const config = { matcher: ["/admin/:path*", "/seller/:path*", "/buyer/:path*", "/messages/:path*"] };

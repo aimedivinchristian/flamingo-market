@@ -42,7 +42,7 @@ export default function RegisterPage() {
       const pw = (document.getElementById("hidden-pw") as HTMLInputElement)?.value;
       setStep("done"); await new Promise(r => setTimeout(r, 1200));
       const signInRes = await signIn("credentials", { email: savedEmail, password: pw, redirect: false });
-      if (signInRes?.ok) { router.push(savedRole === "SELLER" ? "/seller" : "/marketplace"); router.refresh(); } else { router.push("/login"); }
+      if (signInRes?.ok) { router.push(savedRole === "SELLER" ? "/become-seller" : "/marketplace"); router.refresh(); } else { router.push("/login"); }
     } finally { setVerifying(false); }
   }
   async function onResend() {
@@ -58,7 +58,7 @@ export default function RegisterPage() {
             <div className="text-center mb-6"><h1 className="text-2xl font-extrabold text-gray-800 mb-1">Create your account</h1><p className="text-gray-400 text-sm">Join thousands of buyers and sellers in Rwanda</p></div>
             <div className="bg-white rounded-3xl p-7 shadow-card border border-gray-100">
               <div className="grid grid-cols-2 gap-3 mb-5">
-                {([{ v:"BUYER", Icon: ShoppingBag, label:"I want to buy", sub:"Browse & order" }, { v:"SELLER", Icon: Store, label:"I want to sell", sub:"Create my store" }] as { v:"BUYER"|"SELLER"; Icon: any; label: string; sub: string }[]).map(({ v, Icon, label, sub }) => (
+                {([{ v:"BUYER", Icon: ShoppingBag, label:"I want to buy", sub:"Browse & order" }, { v:"SELLER", Icon: Store, label:"I want to sell", sub:"Needs admin approval" }] as { v:"BUYER"|"SELLER"; Icon: any; label: string; sub: string }[]).map(({ v, Icon, label, sub }) => (
                   <button key={v} type="button" onClick={() => setValue("role", v)} className={cn("flex flex-col items-center gap-1 p-4 rounded-2xl border-[1.5px] transition-all", role === v ? "border-pink bg-pink-pale" : "border-gray-200 hover:border-gray-300")}><Icon className={cn("w-5 h-5", role === v ? "text-pink" : "text-gray-400")} /><span className={cn("text-[13px] font-bold", role === v ? "text-pink" : "text-gray-700")}>{label}</span><span className="text-[10.5px] text-gray-400">{sub}</span></button>
                 ))}
               </div>

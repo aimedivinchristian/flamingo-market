@@ -16,8 +16,11 @@ export async function POST(req: NextRequest) {
     const wait = await cooldownLeft(email, "VERIFY");
     if (wait > 0) return NextResponse.json({ error: `Please wait ${wait}s before requesting another code` }, { status: 429 });
     const hashed = await bcrypt.hash(password, 12);
-    const r = role === "SELLER" ? "SELLER" : "BUYER";
-    await prisma.user.upsert({ where: { email }, update: { name, password: hashed, role: r, emailVerified: null }, create: { name, email, password: hashed, role: r } });
+    // Nobody becomes a seller just by signing up: choosing "sell" creates a BUYER with a PENDING seller application
+    // that an admin must approve (see /admin/sellers).
+    const wantsSeller = role === "SELLER";
+    const sellerStatus = wantsSeller ? "PENDING" : null;
+    await prisma.user.upsert({ where: { email }, update: { name, password: hashed, role: "BUYER", sellerStatus, emailVerified: null }, create: { name, email, password: hashed, role: "BUYER", sellerStatus } });
     const code = await createOtp(email, "VERIFY");
     await sendOtpEmail(email, name, code);
     return NextResponse.json({ success: true, message: "Verification code sent to your email" });

@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "20");
     const skip = (page - 1) * limit;
 
+    await prisma.product.updateMany({ where: { boostUntil: { lt: new Date() } }, data: { boostUntil: null } }).catch(() => {});
     const where: any = { isActive: true };
     if (category) where.category = { slug: category };
     if (search) where.name = { contains: search, mode: "insensitive" };
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
           seller: { select: { id: true, name: true, image: true } },
           store: { select: { id: true, name: true, logo: true } },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ boostUntil: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
         skip,
         take: limit,
       }),

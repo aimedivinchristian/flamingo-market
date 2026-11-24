@@ -13,7 +13,7 @@ type StatusKey = keyof typeof ORDER_STATUS;
 function StatCard({ label, value, icon: Icon, iconBg, iconColor }: { label: string; value: string | number; icon: any; iconBg: string; iconColor: string }) {
   return (<div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"><div className="flex items-start justify-between mb-3"><div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: iconBg }}><Icon className="w-5 h-5" style={{ color: iconColor }} /></div></div><div className="text-[1.4rem] font-extrabold text-gray-800 mb-0.5 tracking-tight">{value}</div><div className="text-[11.5px] text-gray-400 font-medium">{label}</div></div>);
 }
-const TABS = ["Overview","Orders","Sellers","Products","Categories","Promo Codes","Withdrawals"] as const;
+const TABS = ["Overview","Orders","Sellers","Applications","Products","Categories","Promo Codes","Withdrawals","Boosts","Banners"] as const;
 type Tab = typeof TABS[number];
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -124,6 +124,24 @@ export default function AdminDashboard() {
             <h3 className="text-[17px] font-extrabold text-gray-800 mb-2">Category Management</h3>
             <p className="text-gray-400 text-[13px] mb-5 max-w-sm mx-auto">Create, edit and delete product categories.</p>
             <Link href="/admin/categories" className="inline-flex items-center gap-2 bg-gradient-pink text-white font-bold text-[13.5px] px-6 py-3 rounded-full shadow-pink hover:opacity-90 transition-all"><Package className="w-4 h-4" /> Manage Categories</Link>
+          </div>
+        )}
+        {tab === "Applications" && (
+          <div className="bg-white border border-gray-100 rounded-2xl p-10 text-center shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+            <p className="text-gray-400 text-[13px] mb-5 max-w-sm mx-auto">New sellers must be approved by you before they can sell.</p>
+            <Link href="/admin/sellers" className="inline-flex items-center gap-2 bg-gradient-pink text-white font-bold text-[13.5px] px-6 py-3 rounded-full shadow-pink hover:opacity-90 transition-all">Review Applications</Link>
+          </div>
+        )}
+        {tab === "Boosts" && (
+          <div className="bg-white border border-gray-100 rounded-2xl p-10 text-center shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+            <p className="text-gray-400 text-[13px] mb-5">Approve paid product boost requests.</p>
+            <Link href="/admin/boosts" className="inline-flex items-center gap-2 bg-gradient-pink text-white font-bold text-[13.5px] px-6 py-3 rounded-full shadow-pink hover:opacity-90 transition-all">Manage Boosts</Link>
+          </div>
+        )}
+        {tab === "Banners" && (
+          <div className="bg-white border border-gray-100 rounded-2xl p-10 text-center shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+            <p className="text-gray-400 text-[13px] mb-5">Upload and order the homepage banners.</p>
+            <Link href="/admin/banners" className="inline-flex items-center gap-2 bg-gradient-pink text-white font-bold text-[13.5px] px-6 py-3 rounded-full shadow-pink hover:opacity-90 transition-all">Manage Banners</Link>
           </div>
         )}
         {tab === "Withdrawals" && (

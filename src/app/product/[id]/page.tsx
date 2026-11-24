@@ -12,6 +12,7 @@ import { useWishlist } from "@/lib/wishlist-store";
 import { ReviewSection } from "@/components/reviews/ReviewSection";
 import { RatingBadge } from "@/components/reviews/StarRating";
 import toast from "react-hot-toast";
+import { ChatButton } from "@/components/layout/ChatButton";
 import { ShoppingCart, Heart, Truck, ShieldCheck, RefreshCw, ChevronRight, Minus, Plus, BadgeCheck, Package, MessageCircle, Loader2, AlertCircle } from "lucide-react";
 interface Product { id: string; name: string; description: string; price: number; oldPrice: number | null; stock: number; images: string[]; isFeatured: boolean; isActive: boolean; category: { id: string; name: string; slug: string; emoji: string }; seller: { id: string; name: string; image: string | null }; store: { id: string; name: string; logo: string | null; isVerified: boolean } | null; }
 export default function ProductPage() {
@@ -28,6 +29,7 @@ export default function ProductPage() {
         const res = await fetch(`/api/products/${id}`); const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Product not found");
         setProduct(data);
+        try { const k = `viewed:${id}`; if (!sessionStorage.getItem(k)) { sessionStorage.setItem(k, "1"); fetch(`/api/products/${id}/view`, { method: "POST" }).catch(() => {}); } } catch { /* storage blocked */ }
         const rel = await fetch(`/api/products?category=${data.category.slug}&limit=5`); const rd = await rel.json();
         setRelated((rd.products ?? []).filter((p: any) => p.id !== id).slice(0, 4).map((p: any): ProductType => ({ id: p.id, name: p.name, price: p.price, oldPrice: p.oldPrice, images: p.images ?? [], stock: p.stock, seller: { name: p.seller?.name ?? "" }, category: { name: p.category?.name ?? "" } })));
         const revRes = await fetch(`/api/reviews?productId=${id}`); const revData = await revRes.json();
@@ -72,6 +74,7 @@ export default function ProductPage() {
               <span className="text-[13px] font-semibold text-gray-500">{storeName}</span>
               {isVerified && <><BadgeCheck className="w-3.5 h-3.5 text-cyan" /><span className="text-[11px] font-bold text-cyan bg-cyan-light px-2 py-0.5 rounded-full">Verified</span></>}
             </div>
+            <div className="mb-3"><ChatButton sellerId={product.seller.id} productId={product.id} /></div>
             <h1 className="text-[1.7rem] font-extrabold text-gray-800 leading-tight tracking-tight mb-3">{product.name}</h1>
             <div className="mb-4">{reviewCount > 0 ? <RatingBadge avg={avgRating} count={reviewCount} size="md" /> : <span className="text-[13px] text-gray-400">No reviews yet</span>}</div>
             <div className="flex items-baseline gap-3 mb-6">
