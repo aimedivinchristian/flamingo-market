@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { audit } from "@/lib/audit";
 import { sendEmail, escapeHtml } from "@/lib/email";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -18,7 +19,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       await prisma.product.update({ where: { id: b.productId }, data: { boostUntil: new Date(start.getTime() + b.days * 86400_000) } });
     }
     const updated = await prisma.boostRequest.update({ where: { id: b.id }, data: { status, note: note?.trim() || null } });
-    sendEmail({ to: b.seller.email, subject: `Boost ${status.toLowerCase()} — ${b.product.name}`, html: `<p>Hi ${escapeHtml(b.seller.name)}, your ${b.days}-day boost for "<b>${escapeHtml(b.product.name)}</b>" was <b>${status}</b>.${note ? ` Note: ${escapeHtml(note)}` : ""}</p>` }).catch(() => {});
+    await sendEmail({ to: b.seller.email, subject: `Boost ${status.toLowerCase()} — ${b.product.name}`, html: `<p>Hi ${escapeHtml(b.seller.name)}, your ${b.days}-day boost for "<b>${escapeHtml(b.product.name)}</b>" was <b>${status}</b>.${note ? ` Note: ${escapeHtml(note)}` : ""}</p>` }).catch(() => {});
+    await audit({ id: session.user.id, email: session.user.email }, `boost.${String(status).toLowerCase()}`, b.id, { product: b.product.name, days: b.days, amount: b.amount });
     return NextResponse.json(updated);
   } catch (err) { console.error("[ADMIN_BOOST]", err); return NextResponse.json({ error: "Server error" }, { status: 500 }); }
 }

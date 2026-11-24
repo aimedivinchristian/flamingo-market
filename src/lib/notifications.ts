@@ -1,4 +1,6 @@
 import { sendEmail, escapeHtml } from "./email";
+import prisma from "./prisma";
+import { pushToUsers } from "./push";
 
 
 interface OrderForNotification {
@@ -198,4 +200,15 @@ export async function sendOrderStatusEmail(order: { id: string; buyer: { name: s
       </div>`,
     });
   } catch (err) { console.error("[NOTIFY] Status email failed:", err); }
+}
+
+/* ─── Low-stock alert to the seller (stock <= 3 after a sale) ─── */
+export async function sendLowStockAlert(productIds: string[]) {
+  try {
+    const low = await prisma.product.findMany({ where: { id: { in: productIds }, stock: { lte: 3 } }, select: { name: true, stock: true, seller: { select: { id: true, email: true, name: true } } } });
+    for (const p of low) {
+      await pushToUsers([p.seller.id], { title: "Low stock ⚠️", body: `${p.name}: only ${p.stock} left`, url: "/seller" });
+      if (process.env.RESEND_API_KEY) await sendEmail({ to: p.seller.email, subject: `Low stock: ${p.name}`, html: `<p>Hi ${escapeHtml(p.seller.name)}, "<b>${escapeHtml(p.name)}</b>" has only <b>${p.stock}</b> left. <a href="${process.env.NEXTAUTH_URL}/seller">Restock</a> to keep selling.</p>` }).catch(() => {});
+    }
+  } catch (err) { console.error("[LOW_STOCK]", err); }
 }

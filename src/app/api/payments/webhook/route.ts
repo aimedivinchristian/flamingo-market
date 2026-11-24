@@ -31,6 +31,10 @@ export async function POST(req: NextRequest) {
     const meta            = checkoutSession.metadata!;
 
     try {
+      // Stripe retries webhooks: never create the same order twice
+      const already = await prisma.order.findUnique({ where: { paymentRef: checkoutSession.id }, select: { id: true } });
+      if (already) return NextResponse.json({ received: true });
+
       const items = JSON.parse(meta.items) as { productId: string; quantity: number }[];
 
       // Build order items with current prices
@@ -52,6 +56,7 @@ export async function POST(req: NextRequest) {
           phone:   meta.phone,
           notes:   meta.notes || null,
           status:  "CONFIRMED",
+          paymentRef: checkoutSession.id,
           items:   { create: orderItems },
         },
         include: {
@@ -62,8 +67,8 @@ export async function POST(req: NextRequest) {
 
       // Decrease stock
       for (const item of orderItems) {
-        await prisma.product.update({
-          where: { id: item.productId },
+        await prisma.product.updateMany({
+          where: { id: item.productId, stock: { gte: item.quantity } },
           data:  { stock: { decrement: item.quantity } },
         });
       }

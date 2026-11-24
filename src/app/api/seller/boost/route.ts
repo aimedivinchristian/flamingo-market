@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const pending = await prisma.boostRequest.findFirst({ where: { productId: product.id, status: "PENDING" } });
     if (pending) return NextResponse.json({ error: "This product already has a pending boost request" }, { status: 409 });
     const boost = await prisma.boostRequest.create({ data: { productId: product.id, sellerId: session.user.id, days: Number(days), amount: Number(days) * BOOST_PRICE_PER_DAY } });
-    if (process.env.ADMIN_EMAIL) sendEmail({ to: process.env.ADMIN_EMAIL, subject: "New boost request", html: `<p>${escapeHtml(session.user.name || "A seller")} requested a <b>${boost.days}-day boost</b> for "${escapeHtml(product.name)}" — RWF ${boost.amount.toLocaleString()}. Reference: <b>${boost.id.slice(-6).toUpperCase()}</b>.</p><p><a href="${process.env.NEXTAUTH_URL}/admin/boosts">Review requests</a></p>` }).catch(() => {});
+    if (process.env.ADMIN_EMAIL) await sendEmail({ to: process.env.ADMIN_EMAIL, subject: "New boost request", html: `<p>${escapeHtml(session.user.name || "A seller")} requested a <b>${boost.days}-day boost</b> for "${escapeHtml(product.name)}" — RWF ${boost.amount.toLocaleString()}. Reference: <b>${boost.id.slice(-6).toUpperCase()}</b>.</p><p><a href="${process.env.NEXTAUTH_URL}/admin/boosts">Review requests</a></p>` }).catch(() => {});
     return NextResponse.json(boost);
   } catch (err) { console.error("[BOOST]", err); return NextResponse.json({ error: "Server error" }, { status: 500 }); }
 }

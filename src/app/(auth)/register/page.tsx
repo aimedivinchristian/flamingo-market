@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import { User, Mail, Lock, Store, ShoppingBag, Eye, EyeOff, ArrowLeft, RefreshCw, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-const detailsSchema = z.object({ name: z.string().min(2, "Name must be at least 2 characters"), email: z.string().email("Please enter a valid email address"), password: z.string().min(6, "Password must be at least 6 characters"), confirmPassword: z.string(), role: z.enum(["BUYER","SELLER"]) }).refine(d => d.password === d.confirmPassword, { message: "Passwords don't match", path: ["confirmPassword"] });
+const detailsSchema = z.object({ name: z.string().min(2, "Name must be at least 2 characters"), email: z.string().email("Please enter a valid email address"), password: z.string().min(8, "Password must be at least 8 characters").regex(/[A-Za-z]/, "Add at least one letter").regex(/\d/, "Add at least one number"), confirmPassword: z.string(), role: z.enum(["BUYER","SELLER"]) }).refine(d => d.password === d.confirmPassword, { message: "Passwords don't match", path: ["confirmPassword"] });
 type DetailsForm = z.infer<typeof detailsSchema>;
 function OtpInput({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   function handleKey(i: number, e: React.KeyboardEvent<HTMLInputElement>) { if (e.key === "Backspace") { if (value[i]) { const next = [...value]; next[i] = ""; onChange(next); } else if (i > 0) (document.getElementById(`otp-${i-1}`) as HTMLInputElement)?.focus(); } }

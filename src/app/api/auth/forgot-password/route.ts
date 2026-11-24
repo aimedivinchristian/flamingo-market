@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { rateLimit, tooMany, clientIp } from "@/lib/rate-limit";
 import { createOtp, sendResetEmail, cooldownLeft } from "@/lib/otp";
 export async function POST(req: NextRequest) {
   try {
+    { const ip = clientIp(req); const r = await rateLimit(`forgot:ip:${ip}`, 8, 60 * 60); if (!r.ok) return tooMany(r.retryAfter); }
     const { email: raw } = await req.json();
     const email = String(raw || "").trim().toLowerCase();
     if (!email) return NextResponse.json({ error: "Email required" }, { status: 400 });

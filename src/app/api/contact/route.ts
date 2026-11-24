@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { rateLimit, tooMany, clientIp } from "@/lib/rate-limit";
 import { sendEmail, escapeHtml } from "@/lib/email";
 export async function POST(req: NextRequest) {
   try {
+    { const ip = clientIp(req); const r = await rateLimit(`contact:ip:${ip}`, 6, 60 * 60); if (!r.ok) return tooMany(r.retryAfter); }
     const b = await req.json();
     const name = String(b.name || "").trim().slice(0, 100);
     const email = String(b.email || "").trim().toLowerCase().slice(0, 150);

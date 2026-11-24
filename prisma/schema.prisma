@@ -42,6 +42,7 @@ model User {
   image         String?
   phone         String?
   role          Role      @default(BUYER)
+  suspended     Boolean   @default(false)
   sellerStatus  String?   // PENDING | APPROVED | REJECTED (null = never applied)
   sellerApplication String? @db.Text
   sellerNote    String?
@@ -59,6 +60,7 @@ model User {
   convsAsBuyer  Conversation[] @relation("ConvBuyer")
   convsAsSeller Conversation[] @relation("ConvSeller")
   sentMessages  Message[]
+  pushSubscriptions PushSubscription[]
   store       Store?
   addresses   Address[]
 
@@ -184,6 +186,7 @@ model Order {
   address String
   phone   String
   notes   String?
+  paymentRef String? @unique   // MoMo reference id / Stripe session id (idempotency + ownership checks)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -194,6 +197,7 @@ model Order {
   @@index([buyerId])
   @@index([status])
   @@index([createdAt])
+  @@index([buyerId, createdAt])
 }
 
 model OrderItem {
@@ -381,4 +385,38 @@ model BoostRequest {
 
   @@index([sellerId])
   @@index([status])
+}
+
+model RateLimit {
+  key     String   @id
+  count   Int      @default(1)
+  resetAt DateTime
+
+  @@index([resetAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actorEmail String?
+  action     String
+  target     String?
+  meta       String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

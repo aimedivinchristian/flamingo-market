@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
+import { useT } from "@/lib/i18n";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 const schema = z.object({
@@ -16,6 +17,7 @@ const schema = z.object({
 type Form = z.infer<typeof schema>;
 
 export default function LoginPage() {
+  const t = useT();
   const router = useRouter();
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,7 +27,10 @@ export default function LoginPage() {
     setLoading(true);
     const res = await signIn("credentials", { ...data, redirect: false });
     setLoading(false);
-    if (res?.error) { toast.error("Invalid email or password"); return; }
+    if (res?.error) {
+      const msg: Record<string, string> = { EMAIL_NOT_VERIFIED: "Please verify your email first. Register again to get a new code.", ACCOUNT_SUSPENDED: "This account is suspended. Contact support.", TOO_MANY_ATTEMPTS: "Too many attempts. Please wait a few minutes and try again." };
+      toast.error(msg[res.error] || "Invalid email or password"); return;
+    }
     toast.success("Welcome back!");
     router.push("/"); router.refresh();
   };
@@ -38,8 +43,8 @@ export default function LoginPage() {
             <img src="/flamingo-logo.png" alt="Flamingo Market" className="w-9 h-9 object-contain" />
             <span className="font-extrabold text-xl text-pink">FLAMINGO MARKET</span>
           </Link>
-          <h1 className="text-2xl font-extrabold text-flamingo-dark mb-1">Welcome back</h1>
-          <p className="text-gray-400 text-sm">Sign in to your account</p>
+          <h1 className="text-2xl font-extrabold text-flamingo-dark mb-1">{t("auth.welcomeBack")}</h1>
+          <p className="text-gray-400 text-sm">{t("auth.signInSub")}</p>
         </div>
 
         <div className="bg-white rounded-3xl p-8 shadow-card border border-gray-100">
@@ -88,7 +93,7 @@ export default function LoginPage() {
             </div>
 
             <div className="text-right">
-              <Link href="/forgot-password" className="text-[12px] text-pink font-semibold hover:underline">Forgot password?</Link>
+              <Link href="/forgot-password" className="text-[12px] text-pink font-semibold hover:underline">{t("auth.forgot")}</Link>
             </div>
 
             <button
@@ -104,7 +109,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-gray-400 mt-6">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-pink font-bold hover:underline">Create one</Link>
+          <Link href="/register" className="text-pink font-bold hover:underline">{t("auth.createOne")}</Link>
         </p>
       </div>
     </div>

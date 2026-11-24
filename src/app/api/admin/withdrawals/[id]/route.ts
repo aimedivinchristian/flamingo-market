@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { pushToUsers, pushToAdmins } from "@/lib/push";
+import { audit } from "@/lib/audit";
 import { sendEmail, escapeHtml } from "@/lib/email";
 
 // Allowed moves: PENDING -> APPROVED | REJECTED, APPROVED -> PAID | REJECTED
@@ -20,6 +22,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       await sendEmail({ to: w.seller.email, subject: `Withdrawal ${status.toLowerCase()} — RWF ${w.amount.toLocaleString()}`,
         html: `<p>Hi ${escapeHtml(w.seller.name)}, your withdrawal request of <b>RWF ${w.amount.toLocaleString()}</b> is now <b>${status}</b>.</p>${note ? `<p>Note: ${escapeHtml(note)}</p>` : ""}` });
     } catch (e) { console.error("[WITHDRAWAL_EMAIL]", e); }
+    await audit({ id: session.user.id, email: session.user.email }, `withdrawal.${String(status).toLowerCase()}`, w.id, { amount: w.amount, seller: w.seller.email });
+    await pushToUsers([w.sellerId], { title: `Withdrawal ${String(status).toLowerCase()}`, body: `RWF ${w.amount.toLocaleString()}`, url: "/seller/earnings" });
     return NextResponse.json(updated);
   } catch (err) { console.error("[ADMIN_WITHDRAWAL]", err); return NextResponse.json({ error: "Server error" }, { status: 500 }); }
 }

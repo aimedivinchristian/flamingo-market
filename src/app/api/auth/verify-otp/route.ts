@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { rateLimit, tooMany, clientIp } from "@/lib/rate-limit";
 import { verifyOtp } from "@/lib/otp";
 export async function POST(req: NextRequest) {
   try {
+    { const ip = clientIp(req); const r = await rateLimit(`otp-verify:ip:${ip}`, 30, 15 * 60); if (!r.ok) return tooMany(r.retryAfter); }
     const body = await req.json();
     const email = String(body.email || "").trim().toLowerCase();
     const code = String(body.code || "").trim();

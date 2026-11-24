@@ -122,3 +122,38 @@ body {
 .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none}
 .scrollbar-hide::-webkit-scrollbar{display:none}
 @media (max-width: 767px){ body{padding-bottom:calc(4rem + env(safe-area-inset-bottom))} }
+
+/* ───────── Dark mode ─────────
+   Remaps the light utility colours used across the app, so every page follows the theme
+   without touching each component. Toggled by the `dark` class on <html>. */
+.dark { color-scheme: dark; }
+.dark body { background:#0e0e14; color:#ececf2; }
+.dark .bg-white { background-color:#171720 !important; }
+.dark .bg-gray-50 { background-color:#0e0e14 !important; }
+.dark .bg-gray-100 { background-color:#1f1f2a !important; }
+.dark .bg-gray-200 { background-color:#2a2a37 !important; }
+.dark .bg-white\/95, .dark .bg-white\/90, .dark .bg-white\/80 { background-color:rgba(23,23,32,.92) !important; }
+.dark .bg-pink-pale { background-color:rgba(232,38,122,.14) !important; }
+.dark .bg-cyan-light { background-color:rgba(13,184,212,.14) !important; }
+.dark .bg-gradient-pink-pale { background-image:linear-gradient(135deg,#1a1220,#0f1a22) !important; }
+.dark .from-pink-pale { --tw-gradient-from:#1a1220 var(--tw-gradient-from-position) !important; }
+.dark .to-cyan-light { --tw-gradient-to:#0f1d22 var(--tw-gradient-to-position) !important; }
+.dark .via-white { --tw-gradient-stops:var(--tw-gradient-from), #14141c, var(--tw-gradient-to) !important; }
+.dark [style*="linear-gradient(135deg,#fff5f9"] { background:linear-gradient(135deg,#1a1220,#0f1a22) !important; }
+.dark .text-gray-800 { color:#f2f2f7 !important; }
+.dark .text-gray-700 { color:#e2e2ea !important; }
+.dark .text-gray-600 { color:#c8c8d4 !important; }
+.dark .text-gray-500 { color:#a8a8b8 !important; }
+.dark .text-gray-400 { color:#8a8a9b !important; }
+.dark .text-gray-300 { color:#6a6a7b !important; }
+.dark .text-gray-200 { color:#4d4d5b !important; }
+.dark .border-gray-50 { border-color:#22222c !important; }
+.dark .border-gray-100 { border-color:#2a2a36 !important; }
+.dark .border-gray-200 { border-color:#363644 !important; }
+.dark .border-gray-300 { border-color:#454554 !important; }
+.dark .border-pink-pale2 { border-color:rgba(232,38,122,.3) !important; }
+.dark .divide-gray-50 > * + * { border-color:#22222c !important; }
+.dark input, .dark textarea, .dark select { background-color:#171720; color:#ececf2; }
+.dark input::placeholder, .dark textarea::placeholder { color:#6a6a7b; }
+.dark .shadow-card { box-shadow:0 8px 30px rgba(0,0,0,.45) !important; }
+.dark img { filter:brightness(.92); }

@@ -13,6 +13,7 @@ import { ReviewSection } from "@/components/reviews/ReviewSection";
 import { RatingBadge } from "@/components/reviews/StarRating";
 import toast from "react-hot-toast";
 import { ChatButton } from "@/components/layout/ChatButton";
+import { AlsoBought } from "@/components/products/AlsoBought";
 import { ShoppingCart, Heart, Truck, ShieldCheck, RefreshCw, ChevronRight, Minus, Plus, BadgeCheck, Package, MessageCircle, Loader2, AlertCircle } from "lucide-react";
 interface Product { id: string; name: string; description: string; price: number; oldPrice: number | null; stock: number; images: string[]; isFeatured: boolean; isActive: boolean; category: { id: string; name: string; slug: string; emoji: string }; seller: { id: string; name: string; image: string | null }; store: { id: string; name: string; logo: string | null; isVerified: boolean } | null; }
 export default function ProductPage() {
@@ -29,6 +30,7 @@ export default function ProductPage() {
         const res = await fetch(`/api/products/${id}`); const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Product not found");
         setProduct(data);
+        try { const r: { id: string; cat: string }[] = JSON.parse(localStorage.getItem("recent") || "[]").filter((x: any) => x.id !== data.id); r.unshift({ id: data.id, cat: data.category?.id ?? data.categoryId ?? "" }); localStorage.setItem("recent", JSON.stringify(r.slice(0, 20))); } catch { /* storage blocked */ }
         try { const k = `viewed:${id}`; if (!sessionStorage.getItem(k)) { sessionStorage.setItem(k, "1"); fetch(`/api/products/${id}/view`, { method: "POST" }).catch(() => {}); } } catch { /* storage blocked */ }
         const rel = await fetch(`/api/products?category=${data.category.slug}&limit=5`); const rd = await rel.json();
         setRelated((rd.products ?? []).filter((p: any) => p.id !== id).slice(0, 4).map((p: any): ProductType => ({ id: p.id, name: p.name, price: p.price, oldPrice: p.oldPrice, images: p.images ?? [], stock: p.stock, seller: { name: p.seller?.name ?? "" }, category: { name: p.category?.name ?? "" } })));
@@ -105,6 +107,7 @@ export default function ProductPage() {
           {activeTab === "reviews" && <div className="max-w-2xl"><ReviewSection productId={product.id} productName={product.name} /></div>}
           {activeTab === "ship" && (<div className="max-w-2xl space-y-3">{[{ icon: Truck, title: "Delivery", body: "Same-day delivery in Kigali for orders placed before 12PM. Free on orders over RWF 30,000." }, { icon: RefreshCw, title: "Returns", body: "Easy 7-day returns for unused items in original packaging." }, { icon: ShieldCheck, title: "Buyer Protection", body: "Your payment is held securely until you confirm delivery." }, { icon: MessageCircle, title: "Support", body: "Chat with the seller directly. Our team is available 24/7." }].map(({ icon: Icon, title, body }) => (<div key={title} className="flex gap-4 bg-gray-50 border border-gray-100 rounded-2xl p-5"><div className="w-10 h-10 rounded-xl bg-pink-pale flex items-center justify-center shrink-0"><Icon className="w-4 h-4 text-pink" /></div><div><div className="text-[13px] font-bold text-gray-800 mb-1">{title}</div><div className="text-[12.5px] text-gray-500 leading-relaxed">{body}</div></div></div>))}</div>)}
         </div>
+        <AlsoBought productId={product.id} />
         {related.length > 0 && <div><div className="mb-6"><span className="section-label">You May Also Like</span><h2 className="section-title">Related Products</h2></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-4">{related.map(p => <ProductCard key={p.id} product={p} />)}</div></div>}
       </div>
       <Footer />

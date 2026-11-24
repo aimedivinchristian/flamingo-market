@@ -22,6 +22,8 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export const dynamic = "force-dynamic"; // never freeze at build time
+
 export async function GET() {
   try {
     const stores = await prisma.store.findMany({
@@ -32,7 +34,7 @@ export async function GET() {
       },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json(stores);
+    return NextResponse.json(stores, { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=150" } });
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }

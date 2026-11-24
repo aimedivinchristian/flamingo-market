@@ -20,7 +20,7 @@ function ResetInner() {
     e.preventDefault();
     if (!email.trim()) { toast.error("Missing email — go back and request a new code"); return; }
     if (code.trim().length < 6) { toast.error("Enter the 6-digit code from your email"); return; }
-    if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) { toast.error("Password needs 8+ characters with letters and numbers"); return; }
     if (password !== confirmPw) { toast.error("Passwords don't match"); return; }
 
     setSubmitting(true);

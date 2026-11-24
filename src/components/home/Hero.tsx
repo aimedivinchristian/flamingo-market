@@ -1,4 +1,6 @@
+"use client";
 import Link from "next/link";
+import { useT } from "@/lib/i18n";
 import { ShoppingCart, Store, ShieldCheck, Truck, Headphones, Award } from "lucide-react";
 
 const FLOATING_BADGES = [
@@ -9,6 +11,7 @@ const FLOATING_BADGES = [
 ];
 
 export function Hero() {
+  const t = useT();
   return (
     <section className="relative overflow-hidden" style={{ background: "linear-gradient(135deg,#eef7ff 0%,#fff0f7 45%,#ffe9f5 100%)" }}>
       {/* Decorative glow blobs */}
@@ -36,7 +39,7 @@ export function Hero() {
             <div className="font-extrabold tracking-[0.15em] leading-none -mt-1" style={{ fontSize: "clamp(1.2rem,3.2vw,1.9rem)", color: "#0db8d4" }}>MARKET</div>
           </div>
         </div>
-        <div className="text-[11px] sm:text-[12px] font-semibold tracking-[0.25em] text-gray-400 uppercase mt-2">Shop Easy. Shop Smart.</div>
+        <div className="text-[11px] sm:text-[12px] font-semibold tracking-[0.25em] text-gray-400 uppercase mt-2">{t("hero.tagline")}</div>
       </div>
 
       <div className="max-w-[1280px] mx-auto px-4 sm:px-5 pb-14 sm:pb-16 relative z-10">
@@ -48,14 +51,14 @@ export function Hero() {
               <span className="w-1.5 h-1.5 bg-pink rounded-full" />Rwanda&apos;s Premier Online Marketplace
             </div>
             <h1 className="font-extrabold leading-[1.12] tracking-tight mb-4 text-flamingo-dark" style={{ fontSize: "clamp(1.9rem,4.2vw,3.1rem)" }}>
-              Shop from<br /><span style={{ color: "var(--pink)" }}>Different Stores</span><br />All in One Place
+              {t("hero.line1")}<br /><span style={{ color: "var(--pink)" }}>{t("hero.line2")}</span><br />{t("hero.line3")}
             </h1>
             <p className="text-gray-500 text-[14.5px] sm:text-[15px] leading-relaxed max-w-[440px] mx-auto lg:mx-0 mb-7">
               Discover thousands of products from verified local sellers across Rwanda. Fashion, beauty, electronics, groceries — delivered to your door.
             </p>
             <div className="flex flex-wrap justify-center lg:justify-start gap-3">
-              <Link href="/marketplace" className="btn-primary px-7 py-3 text-[14px] font-bold"><ShoppingCart className="w-4 h-4" />Shop Now</Link>
-              <Link href="/register?role=SELLER" className="btn-secondary px-7 py-3 text-[14px]"><Store className="w-4 h-4" />Open Your Store</Link>
+              <Link href="/marketplace" className="btn-primary px-7 py-3 text-[14px] font-bold"><ShoppingCart className="w-4 h-4" />{t("hero.shopNow")}</Link>
+              <Link href="/register?role=SELLER" className="btn-secondary px-7 py-3 text-[14px]"><Store className="w-4 h-4" />{t("hero.openStore")}</Link>
             </div>
           </div>
 

@@ -7,6 +7,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
+import { rateLimit, tooMany }        from "@/lib/rate-limit";
+import { pushToAdmins, pushToUsers } from "@/lib/push";
+import { sendLowStockAlert }         from "@/lib/notifications";
 import { sendOrderNotification }     from "@/lib/notifications";
 import { v4 as uuid }                from "uuid";
 
@@ -87,55 +90,48 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Login required" }, { status: 401 });
+    // Each call sends a payment prompt to a phone — limit it so it can't be used to spam people
+    const rl = await rateLimit(`momo:${session.user.id}`, 5, 10 * 60);
+    if (!rl.ok) return tooMany(rl.retryAfter);
 
-    const { items, address, phone, notes } = await req.json();
-
-    if (!items?.length || !address || !phone) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    const body = await req.json();
+    const address = String(body.address || "").trim().slice(0, 300);
+    const phone = String(body.phone || "").trim().replace(/\s+/g, "").slice(0, 20);
+    const notes = body.notes ? String(body.notes).trim().slice(0, 500) : null;
+    if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > 50 || !address || !/^\+?\d{9,15}$/.test(phone)) {
+      return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
     }
-
-    // Validate & total
+    const qty = new Map<string, number>();
+    for (const it of body.items) {
+      const q = Number(it?.quantity);
+      if (typeof it?.productId !== "string" || !Number.isInteger(q) || q < 1 || q > 100) return NextResponse.json({ error: "Invalid cart item" }, { status: 400 });
+      qty.set(it.productId, (qty.get(it.productId) || 0) + q);
+    }
+    const products = await prisma.product.findMany({ where: { id: { in: Array.from(qty.keys()) } } });
+    if (products.length !== qty.size) return NextResponse.json({ error: "Product unavailable" }, { status: 400 });
     let total = 0;
-    const orderItems = [];
-    for (const item of items) {
-      const product = await prisma.product.findUnique({ where: { id: item.productId } });
-      if (!product || !product.isActive) {
-        return NextResponse.json({ error: `Product unavailable` }, { status: 400 });
-      }
-      if (product.stock < item.quantity) {
-        return NextResponse.json({ error: `Not enough stock: ${product.name}` }, { status: 400 });
-      }
-      total += product.price * item.quantity;
-      orderItems.push({ productId: item.productId, quantity: item.quantity, price: product.price });
+    const orderItems: { productId: string; quantity: number; price: number }[] = [];
+    for (const p of products) {
+      const q = qty.get(p.id)!;
+      if (!p.isActive) return NextResponse.json({ error: `Product unavailable: ${p.name}` }, { status: 400 });
+      if (p.stock < q) return NextResponse.json({ error: `Not enough stock: ${p.name}` }, { status: 400 });
+      total += p.price * q; orderItems.push({ productId: p.id, quantity: q, price: p.price });
     }
 
     const referenceId = uuid();
-
-    // Create PENDING order first
+    // PENDING order, tied to this payment reference (so only this payment can confirm it)
     const order = await prisma.order.create({
-      data: {
-        buyerId: session.user.id,
-        total, address, phone,
-        notes:  notes ?? null,
-        status: "PENDING",
-        items:  { create: orderItems },
-      },
-      include: {
-        buyer: { select: { name: true, email: true } },
-        items: { include: { product: { select: { name: true } } } },
-      },
+      data: { buyerId: session.user.id, total, address, phone, notes, status: "PENDING", paymentRef: referenceId, items: { create: orderItems } },
     });
 
-    // Initiate MoMo payment
-    const token = await getMoMoToken();
-    await requestToPay(token, referenceId, total, phone, `Order #${order.id.slice(-6)}`);
-
-    return NextResponse.json({
-      success:     true,
-      orderId:     order.id,
-      referenceId,
-      message:     "Payment request sent to your phone. Please approve the prompt.",
-    });
+    try {
+      const token = await getMoMoToken();
+      await requestToPay(token, referenceId, total, phone, `Order #${order.id.slice(-6)}`);
+    } catch (e) {
+      await prisma.order.update({ where: { id: order.id }, data: { status: "CANCELLED" } }).catch(() => {});
+      throw e;
+    }
+    return NextResponse.json({ success: true, orderId: order.id, referenceId, message: "Payment request sent to your phone. Please approve the prompt." });
   } catch (err) {
     console.error("[MOMO_INITIATE]", err);
     return NextResponse.json({ error: "Payment initiation failed" }, { status: 500 });
@@ -149,45 +145,42 @@ export async function GET(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
-    const referenceId      = searchParams.get("ref");
-    const orderId          = searchParams.get("orderId");
+    const referenceId = searchParams.get("ref");
+    const orderId = searchParams.get("orderId");
+    if (!referenceId || !orderId) return NextResponse.json({ error: "Missing params" }, { status: 400 });
 
-    if (!referenceId || !orderId) {
-      return NextResponse.json({ error: "Missing params" }, { status: 400 });
-    }
+    // The order must be MINE and be the one this exact payment reference was created for
+    const existing = await prisma.order.findFirst({ where: { id: orderId, buyerId: session.user.id, paymentRef: referenceId } });
+    if (!existing) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    if (existing.status !== "PENDING") return NextResponse.json({ status: existing.status === "CANCELLED" ? "FAILED" : "SUCCESSFUL" }); // already settled — no side effects twice
 
-    const token  = await getMoMoToken();
+    const token = await getMoMoToken();
     const status = await checkPaymentStatus(token, referenceId);
 
     if (status.status === "SUCCESSFUL") {
-      // Update order to CONFIRMED
-      const order = await prisma.order.update({
-        where: { id: orderId },
-        data:  { status: "CONFIRMED" },
-        include: {
-          buyer: { select: { name: true, email: true } },
-          items: { include: { product: { select: { name: true } } } },
-        },
-      });
-
-      // Decrease stock
-      for (const item of order.items) {
-        await prisma.product.update({
-          where: { id: item.productId },
-          data:  { stock: { decrement: item.quantity } },
-        });
+      // Only the request that flips PENDING -> CONFIRMED does the follow-up work (idempotent under repeated polling)
+      const flipped = await prisma.order.updateMany({ where: { id: orderId, status: "PENDING" }, data: { status: "CONFIRMED" } });
+      if (flipped.count === 1) {
+        const order = await prisma.order.findUnique({ where: { id: orderId }, include: { buyer: { select: { name: true, email: true } }, items: { include: { product: { select: { name: true, sellerId: true } } } } } });
+        if (order) {
+          for (const item of order.items) {
+            await prisma.product.updateMany({ where: { id: item.productId, stock: { gte: item.quantity } }, data: { stock: { decrement: item.quantity } } });
+          }
+          await prisma.orderStatusHistory.create({ data: { orderId, status: "CONFIRMED", note: "Paid with MTN MoMo", createdBy: session.user.id } }).catch(() => {});
+          await Promise.allSettled([
+            sendOrderNotification(order as any),
+            pushToAdmins({ title: "New paid order 💰", body: `RWF ${order.total.toLocaleString()} via MoMo`, url: "/admin" }),
+            pushToUsers(Array.from(new Set(order.items.map(i => i.product.sellerId))), { title: "New order 🛍️", body: "A paid order is waiting for you", url: "/seller/orders" }),
+            sendLowStockAlert(order.items.map(i => i.productId)),
+          ]);
+        }
       }
-
-      // Notify admin
-      await sendOrderNotification(order as any);
-
-      return NextResponse.json({ status: "SUCCESSFUL", order });
+      return NextResponse.json({ status: "SUCCESSFUL", order: { id: orderId } });
     }
 
     if (status.status === "FAILED") {
-      await prisma.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } });
+      await prisma.order.updateMany({ where: { id: orderId, status: "PENDING" }, data: { status: "CANCELLED" } });
     }
-
     return NextResponse.json({ status: status.status });
   } catch (err) {
     console.error("[MOMO_STATUS]", err);

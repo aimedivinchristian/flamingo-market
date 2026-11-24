@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { pushToUsers, pushToAdmins } from "@/lib/push";
 import { sendEmail, escapeHtml } from "@/lib/email";
 
 export async function GET() {
@@ -27,9 +28,10 @@ export async function POST(req: NextRequest) {
     if (phone.length < 8) return NextResponse.json({ error: "A phone number is required so we can reach you" }, { status: 400 });
     await prisma.user.update({ where: { id: me.id }, data: { sellerStatus: "PENDING", sellerApplication: application, phone, sellerNote: null } });
     if (process.env.ADMIN_EMAIL && me.sellerStatus !== "PENDING") {
-      sendEmail({ to: process.env.ADMIN_EMAIL, subject: `New seller application — ${me.name}`,
+      await sendEmail({ to: process.env.ADMIN_EMAIL, subject: `New seller application — ${me.name}`,
         html: `<p><b>${escapeHtml(me.name)}</b> (${escapeHtml(me.email)}, ${escapeHtml(phone)}) applied to become a seller.</p><p style="white-space:pre-wrap">${escapeHtml(application)}</p><p><a href="${process.env.NEXTAUTH_URL}/admin/sellers">Review applications</a></p>` }).catch(() => {});
     }
+    if (me.sellerStatus !== "PENDING") await pushToAdmins({ title: "New seller application", body: `${me.name} wants to sell on Flamingo`, url: "/admin/sellers" });
     return NextResponse.json({ success: true });
   } catch (err) { console.error("[SELLER_APPLY]", err); return NextResponse.json({ error: "Server error" }, { status: 500 }); }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { pushToUsers, pushToAdmins } from "@/lib/push";
 import { sendEmail, escapeHtml } from "@/lib/email";
 
 async function loadConv(id: string, me: string) {
@@ -46,11 +47,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const msg = await prisma.message.create({ data: { conversationId: c.id, senderId: me, body: text }, select: { id: true, senderId: true, body: true, createdAt: true } });
     await prisma.conversation.update({ where: { id: c.id }, data: { lastMessage: text.slice(0, 120), lastMessageAt: new Date(), ...(iAmBuyer ? { sellerUnread: { increment: 1 } } : { buyerUnread: { increment: 1 } }) } });
 
+    await pushToUsers([iAmBuyer ? c.sellerId : c.buyerId], { title: iAmBuyer ? c.buyer.name : (c.seller.store?.name || c.seller.name), body: text.slice(0, 120), url: `/messages?c=${c.id}` });
+
     // Email the other person only when this is the first unread message (avoids spam)
     if (otherUnreadBefore === 0 && process.env.RESEND_API_KEY) {
       const other = iAmBuyer ? c.seller : c.buyer;
       const fromName = iAmBuyer ? c.buyer.name : (c.seller.store?.name || c.seller.name);
-      sendEmail({ to: other.email, subject: `New message from ${fromName} — Flamingo Market`,
+      await sendEmail({ to: other.email, subject: `New message from ${fromName} — Flamingo Market`,
         html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;">
           <p style="font-size:14px;"><b>${escapeHtml(fromName)}</b> sent you a message:</p>
           <p style="background:#fff0f7;border-radius:12px;padding:14px;font-size:14px;color:#444;white-space:pre-wrap">${escapeHtml(text.slice(0, 300))}</p>

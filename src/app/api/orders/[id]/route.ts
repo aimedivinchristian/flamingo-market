@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { pushToUsers, pushToAdmins } from "@/lib/push";
 import { sendOrderStatusEmail } from "@/lib/notifications";
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -39,6 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const updated = await prisma.order.update({ where: { id: params.id }, data: { status }, include: { buyer: { select: { name: true, email: true } }, items: { include: { product: { select: { name: true } } } } } });
     await prisma.orderStatusHistory.create({ data: { orderId: params.id, status, note: note?.trim() || null, createdBy: session.user.id } });
     await sendOrderStatusEmail({ id: updated.id, buyer: updated.buyer }, status, note?.trim() || null);
+    await pushToUsers([updated.buyerId], { title: `Order ${String(status).toLowerCase()}`, body: note?.trim() || `Your order #${updated.id.slice(-6).toUpperCase()} is now ${String(status).toLowerCase()}`, url: `/order/${updated.id}` });
     if (status === "CANCELLED") { const items = await prisma.orderItem.findMany({ where: { orderId: params.id } }); await Promise.all(items.map(i => prisma.product.update({ where: { id: i.productId }, data: { stock: { increment: i.quantity } } }))); }
     return NextResponse.json(updated);
   } catch (err) { console.error("[PATCH_ORDER]", err); return NextResponse.json({ error: "Server error" }, { status: 500 }); }

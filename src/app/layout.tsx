@@ -26,6 +26,9 @@ export const viewport: Viewport = { themeColor: "#e8267a", width: "device-width"
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark")}}catch(e){}` }} />
+      </head>
       <body className={`${plus.variable} font-plus bg-white text-gray-800 antialiased`}>
         <Providers>
           {children}
